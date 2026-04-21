@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>James Studio AI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Prompt", sans-serif;
+      background: #0f0f1a;
+      color: white;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 80px;
+      background: #151528;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 20px;
+      z-index: 2;
+    }
+
+    .sidebar button {
+      background: none;
+      border: none;
+      color: white;
+      margin: 10px 0;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      padding-top: 60px;
+    }
+
+    .canvas {
+      flex: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0f0f1a;
+      padding: 20px;
+      position: relative;
+    }
+
+    .canvas img {
+      max-width: 80%;
+      max-height: 70vh;
+      border-radius: 12px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    }
+
+    .canvas .placeholder {
+      text-align: center;
+      opacity: 0.75;
+      max-width: 560px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      width: 340px;
+      background: #1a1a2e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      padding: 10px;
+      box-sizing: border-box;
+      color: #111;
+    }
+
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+
+    button.generate {
+      background: #6c2bd9;
+      border: none;
+      padding: 12px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.generate:hover {
+      background: #7c3aed;
+    }
+
+    .header {
+      position: absolute;
+      top: 0;
+      left: 80px;
+      right: 0;
+      height: 60px;
+      background: #151528;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tagline {
+      margin-top: -4px;
+      font-size: 0.8rem;
+      opacity: 0.75;
+    }
+
+    select {
+      background: #0f0f1a;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 5px 8px;
+      border-radius: 6px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      width: fit-content;
+      opacity: 0.9;
+    }
+
+    .meta {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <button onclick="setMode('portrait')" title="Portrait">👤</button>
+    <button onclick="setMode('text3d')" title="3D Text">🔤</button>
+    <button onclick="setMode('intro')" title="Motion Intro">🎬</button>
+  </div>
+
+  <div class="main">
+    <div class="canvas">
+      <img id="preview" src="" alt="" hidden />
+      <div class="placeholder" id="placeholder">
+        <h2 id="canvasHeadline">จากใบหน้าของคุณ สู่กราฟิกระดับมืออาชีพ</h2>
+        <p id="canvasCopy">James Studio AI คือ AI Personal Creative Studio ที่ช่วยให้คุณสร้าง Portrait, 3D Text และ Motion Intro ได้ในที่เดียว</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="badge" id="modeBadge">AI Portrait Engine</span>
+      <h3 id="title">สร้างภาพจากใบหน้าของคุณ</h3>
+      <p class="meta" id="subtitle">AI สำหรับนักสร้างคอนเทนต์ไทย: Canva + Midjourney + Face AI ในแอปเดียว</p>
+
+      <input type="file" id="upload" accept="image/*" />
+      <input type="text" id="style" placeholder="เช่น cinematic, neon, fashion, metallic" />
+      <textarea id="prompt" placeholder="เช่น cinematic portrait, neon light...\nหรือให้ AI ช่วยแนะนำ Prompt"></textarea>
+
+      <button class="generate" onclick="generate()" id="generateButton">✨ สร้างภาพ</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <div>
+      <h2 style="margin: 0">James Studio AI</h2>
+      <div class="tagline" id="tagline">AI Personal Creative Studio</div>
+    </div>
+    <select onchange="setLang(this.value)">
+      <option value="th">ไทย</option>
+      <option value="en">EN</option>
+    </select>
+  </div>
+
+  <script>
+    let mode = "portrait";
+    let currentLang = "th";
+
+    const langData = {
+      th: {
+        modeLabels: {
+          portrait: "AI Portrait Engine",
+          text3d: "3D Text Generator",
+          intro: "Motion Intro Builder",
+        },
+        modeTitles: {
+          portrait: "สร้างภาพจากใบหน้าของคุณ",
+          text3d: "สร้างข้อความ 3D ภาษาไทย",
+          intro: "สร้าง Motion Intro สำหรับคอนเทนต์",
+        },
+        subtitles: {
+          portrait: "AI สำหรับนักสร้างคอนเทนต์ไทย: Canva + Midjourney + Face AI ในแอปเดียว",
+          text3d: "รองรับฟอนต์ไทยสไตล์ modern / neon / metallic",
+          intro: "เหมาะกับ YouTube, TikTok และงานแบรนด์ส่วนตัว",
+        },
+        placeholderPrompt: "เช่น cinematic portrait, neon light...\nหรือให้ AI ช่วยแนะนำ Prompt",
+        stylePrompt: "เช่น cinematic, neon, fashion, metallic",
+        generate: "✨ สร้างภาพ",
+        tagline: "AI Personal Creative Studio",
+        canvasHeadline: "จากใบหน้าของคุณ สู่กราฟิกระดับมืออาชีพ",
+        canvasCopy: "James Studio AI คือ AI Personal Creative Studio ที่ช่วยให้คุณสร้าง Portrait, 3D Text และ Motion Intro ได้ในที่เดียว",
+        noUpload: "กรุณาอัปโหลดรูป",
+      },
+      en: {
+        modeLabels: {
+          portrait: "AI Portrait Engine",
+          text3d: "3D Text Generator",
+          intro: "Motion Intro Builder",
+        },
+        modeTitles: {
+          portrait: "Create AI Portrait from Your Face",
+          text3d: "Generate 3D Text",
+          intro: "Create Motion Intro",
+        },
+        subtitles: {
+          portrait: "Thai-first creator AI: Canva + Midjourney + Face AI in one app",
+          text3d: "Supports Thai typography with modern / neon / metallic styles",
+          intro: "Perfect for YouTube, TikTok, and personal branding",
+        },
+        placeholderPrompt: "Example: cinematic portrait, neon light...\nOr let AI suggest prompts",
+        stylePrompt: "e.g. cinematic, neon, fashion, metallic",
+        generate: "✨ Generate",
+        tagline: "AI Personal Creative Studio",
+        canvasHeadline: "Turn your face into professional visual content",
+        canvasCopy: "James Studio AI transforms your identity into portraits, 3D text, and motion visuals in one workflow.",
+        noUpload: "Please upload an image",
+      },
+    };
+
+    function setMode(m) {
+      mode = m;
+      applyLanguage(currentLang);
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      applyLanguage(lang);
+    }
+
+    function applyLanguage(lang) {
+      const data = langData[lang];
+      document.getElementById("modeBadge").innerText = data.modeLabels[mode];
+      document.getElementById("title").innerText = data.modeTitles[mode];
+      document.getElementById("subtitle").innerText = data.subtitles[mode];
+      document.getElementById("prompt").placeholder = data.placeholderPrompt;
+      document.getElementById("style").placeholder = data.stylePrompt;
+      document.getElementById("generateButton").innerText = data.generate;
+      document.getElementById("tagline").innerText = data.tagline;
+      document.getElementById("canvasHeadline").innerText = data.canvasHeadline;
+      document.getElementById("canvasCopy").innerText = data.canvasCopy;
+    }
+
+    function generate() {
+      const file = document.getElementById("upload").files[0];
+      if (!file) {
+        alert(langData[currentLang].noUpload);
+        return;
+      }
+
+      const preview = document.getElementById("preview");
+      const placeholder = document.getElementById("placeholder");
+      const url = URL.createObjectURL(file);
+
+      preview.src = url;
+      preview.hidden = false;
+      placeholder.hidden = true;
+    }
+
+    applyLanguage(currentLang);
+  </script>
+</body>
+</html>
